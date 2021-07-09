@@ -1,0 +1,7 @@
+pandas
+py2neo
+jieba
+scikit-learn
+flask
+gevent
+flask_cors

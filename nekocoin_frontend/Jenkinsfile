@@ -1,0 +1,27 @@
+pipeline{
+  agent any
+  tools { nodejs "nodejs" }
+  stages{
+    stage('Image Clear'){
+      steps{
+        echo 'Image Clear Stage'
+        sh "if (docker ps|grep nekocoin-fe) then (docker container stop nekocoin-fe && docker container rm nekocoin-fe) fi"
+        sh "if (docker images|grep nekocoin-fe) then (docker rmi \$(docker images nekocoin-fe -q)) fi"
+      }
+    }
+    stage('Build'){
+      steps{
+        echo 'Build Stage'
+        sh "npm install -g cnpm --registry https://registry.npm.taobao.org"
+        sh "cnpm install"
+        sh "npm run build"
+        sh "docker build -t nekocoin-fe:${BUILD_ID} . "
+      }
+    }
+    stage('Deploy'){
+      steps{
+        sh "docker run -p 8000:80 --name nekocoin-fe -v /log:/log -d nekocoin-fe:${BUILD_ID}"
+      }
+    }
+  }
+}

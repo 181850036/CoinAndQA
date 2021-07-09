@@ -1,0 +1,47 @@
+pipeline {
+    agent{
+        label 'master'
+    }
+
+    stages {
+        stage('Maven Build and Test') {
+            agent{
+                docker {
+                    image 'maven:latest'
+                    args '-v /root/.m2:/root/.m2'
+                }
+            }
+            steps{
+                echo 'Maven Build Stage'
+                // sh 'mvn -DskipTests=true package '
+                sh 'mvn clean'
+                sh 'mvn test jacoco:report'
+                sh 'mvn package'
+
+            }
+	    }
+        stage('Image Build'){
+            agent{
+                label 'master'
+            }
+            steps{
+                echo 'Image Build Stage'
+                sh "if (docker ps|grep nekocoin-be) then (docker stop nekocoin-be && docker  rm nekocoin-be) fi"
+                sh "if (docker images|grep nekocoin-be) then (docker rmi \$(docker images nekocoin-be -q)) fi"
+                sh "docker build -t nekocoin-be:${BUILD_ID} ."
+
+            }
+        }
+
+        stage('deploy'){
+            agent{
+                label 'master'
+            }
+            steps{
+
+
+                sh "docker run -p 8001:8001 --name nekocoin-be -v /log:/log -d nekocoin-be:${BUILD_ID}"
+            }
+        }
+    }
+}
